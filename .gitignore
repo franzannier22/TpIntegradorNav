@@ -1,0 +1,11 @@
+# Artefactos de colcon build (se regeneran con colcon build)
+TP2-Grupo7/build/
+TP2-Grupo7/install/
+TP2-Grupo7/log/
+
+# Cache de Python
+__pycache__/
+*.pyc
+
+# Config local de editor (raiz del repo)
+/.vscode/

@@ -23,8 +23,17 @@ def generate_launch_description():
         ),
         launch_arguments={
             'world': LaunchConfiguration('world'),
+            'publish_diffdrive_tf': 'false',
         }.items(),
-        )    
+        )
+
+    ground_truth_tf_node = Node(
+        package='my_robot_navigation',
+        executable='ground_truth_odom_tf',
+        name='ground_truth_odom_tf',
+        output='screen',
+        parameters=[{'use_sim_time': True}],
+        )
 
     slam_toolbox_node = Node(
         package='slam_toolbox',
@@ -51,6 +60,7 @@ def generate_launch_description():
     return LaunchDescription([
         world_arg,
         gazebo_launch,
+        ground_truth_tf_node,
         slam_toolbox_node,
         lifecycle_manager_node,
         ])

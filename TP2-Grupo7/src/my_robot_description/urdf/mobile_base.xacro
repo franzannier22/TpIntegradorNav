@@ -3,6 +3,7 @@
 
   <xacro:arg name="package_name" default="my_robot_description"/>
   <xacro:arg name="mesh_dir" default="meshes"/>
+  <xacro:arg name="publish_diffdrive_tf" default="true"/>
 
   <xacro:property name="global_scale" value="1.0"/>
 
@@ -312,7 +313,9 @@
       <odom_topic>odom</odom_topic>
       <frame_id>odom</frame_id>
       <child_frame_id>base_footprint</child_frame_id>
-      <tf_topic>/tf</tf_topic>
+      <xacro:if value="$(arg publish_diffdrive_tf)">
+        <tf_topic>/tf</tf_topic>
+      </xacro:if>
     </plugin>
 
     <plugin filename="gz-sim-joint-state-publisher-system"

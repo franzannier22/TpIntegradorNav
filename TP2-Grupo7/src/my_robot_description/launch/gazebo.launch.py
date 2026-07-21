@@ -35,6 +35,11 @@ def generate_launch_description():
         'yaw', default_value='0.0',
         description='Orientacion inicial (yaw) del robot en radianes',
     )
+    publish_diffdrive_tf_arg = DeclareLaunchArgument(
+        'publish_diffdrive_tf', default_value='true',
+        description='Si es false, el plugin DiffDrive no publica la TF odom->base_footprint '
+                    '(usado durante SLAM para reemplazarla por la pose real de /odom_real)',
+    )
 
     world = LaunchConfiguration('world')
 
@@ -47,7 +52,10 @@ def generate_launch_description():
     # --- Modelo del robot ---
     xacro_file = os.path.join(pkg_description, 'urdf', 'my_robot.urdf.xacro')
     robot_description = ParameterValue(
-        Command(['xacro ', xacro_file]),
+        Command([
+            'xacro ', xacro_file,
+            ' publish_diffdrive_tf:=', LaunchConfiguration('publish_diffdrive_tf'),
+        ]),
         value_type=str,
     )
 
@@ -104,6 +112,7 @@ def generate_launch_description():
         x_arg,
         y_arg,
         yaw_arg,
+        publish_diffdrive_tf_arg,
         gz_resource_path,
         robot_state_publisher,
         gazebo,

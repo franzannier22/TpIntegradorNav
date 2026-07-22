@@ -1,95 +1,135 @@
-# Resumen de comandos — TP2 Robot Diferencial (Laberinto)
+# TP Integrador ROS 2 — Grupo 7
 
-## Compilar (tras cualquier cambio de archivo)
+Robot diferencial con SLAM (`slam_toolbox`) y localización (`nav2_amcl`) sobre
+Nav2, simulado en Gazebo (gz-sim / Harmonic).
+
+## Compilar (tras cualquier cambio)
 
 ```bash
-cd ~/Documents/Fulgor/TP2
+cd ~/Desktop/TpIntegrador/TP2-Grupo7
 colcon build
 source install/setup.bash
 ```
 
+Sourceá `install/setup.bash` en **cada terminal nueva** que abras (incluida la
+de RViz) — si no, RViz no encuentra las mallas del robot y tira "Errors
+loading geometries".
+
 ---
 
-## Terminal 1 — Gazebo (simulación + LiDAR + bridge)
+## Mundos disponibles
 
-Lanza el simulador con el laberinto, spawnea el robot en la posición de inicio y
-levanta el puente ROS <-> Gazebo.
+| Mundo              | Descripción                                              |
+|---------------------|-----------------------------------------------------------|
+| `living_room.world` | Casa con muebles (sofá, mesa, sillón, etc.), ~5x5 m       |
+| `depot.world`       | Depósito grande con pilares, cajas y estanterías, ~30x15 m |
+
+Los mundos viejos (`maze*.world`, `cafe.world`) quedan en `worlds/` como
+referencia pero no se usan en el TP.
+
+---
+
+## Parte 1 — SLAM (mapeo)
+
+### Terminal 1 — Gazebo + slam_toolbox
 
 ```bash
-cd ~/Documents/Fulgor/TP2
 source install/setup.bash
-ros2 launch my_robot_description gazebo.launch.py yaw:=-1.5708
+ros2 launch my_robot_navigation slam_launch.py world:=living_room.world x:=1.8 y:=-1.9 yaw:=0.0
+# o para el deposito:
+ros2 launch my_robot_navigation slam_launch.py world:=depot.world x:=-5.0 y:=0.0 yaw:=0.0
 ```
 
-- `yaw:=-1.5708` orienta el robot hacia adentro del laberinto al spawnear.
-- Posición de inicio por defecto: `x=-2.025`, `y=3.150` (definida en el launch).
-- Nota: la odometría siempre arranca en `(0,0)` con yaw 0, sin importar el `yaw:=` del spawn.
+Este launch levanta Gazebo + el robot + el bridge + `slam_toolbox`
+(modo `mapping`, online async) gestionado por `nav2_lifecycle_manager`, todo
+en un único archivo.
 
----
+**Detalle importante:** durante el mapeo, el nodo `ground_truth_odom_tf`
+reemplaza la TF `odom→base_footprint` del `DiffDrive` (que patina con los
+choques) por la pose real de Gazebo (`/odom_real`). Esto se activa automático
+en este launch (`publish_diffdrive_tf:=false` hacia adentro) y **no afecta**
+la Parte 2, que sí usa la odometría real/imperfecta.
 
-## Terminal 2 — Nodo de navegación (wall following)
-
-Hace que el robot siga las paredes de forma autónoma publicando en `/cmd_vel`.
-
-```bash
-source ~/Documents/Fulgor/TP2/install/setup.bash
-ros2 run my_robot_navigation wall_follower
-```
-
----
-
-## Terminal 3 — Grilla de ocupación + RViz
-
-Lanza el nodo `occupancy_grid` (con sus parámetros del YAML) y RViz con la
-configuración guardada, todo en un solo comando.
+### Terminal 2 — RViz
 
 ```bash
-cd ~/Documents/Fulgor/TP2
 source install/setup.bash
-ros2 launch my_robot_navigation occupancy_grid_launch.py
+rviz2 -d src/my_robot_description/rviz/urdf_config.rviz
 ```
 
-- El nodo de la grilla lee los parámetros de `config/occupancy_grid.yaml`
-  (resolución, tamaño, origen, `mark_radius`).
-- RViz abre con la configuración de `my_robot_description/rviz/urdf_config.rviz`.
-- Si necesitás cambiar la config de RViz: modificá lo que quieras en la ventana y
-  hacé **File -> Save Config** para actualizar el `.rviz` in-place.
+Si el display "Map" no aparece: cambiá **Fixed Frame** a `map` y el topic del
+display Map a `/map` (después `File → Save Config` para que quede guardado).
 
----
-
-## Terminal 4 — Debug / verificaciones (opcional)
+### Terminal 3 — Joystick (recorrer el mundo)
 
 ```bash
-source ~/Documents/Fulgor/TP2/install/setup.bash
-ros2 topic list                                  # /cmd_vel /odom /tf /joint_states /clock /scan /mapa_visitadas
-ros2 topic hz /scan                              # el laser debe llegar (~10 Hz)
-ros2 topic hz /mapa_visitadas                    # la grilla debe publicar (~2 Hz)
-ros2 topic echo /odom                            # la pose cambia mientras el robot se mueve
-ros2 topic echo /cmd_vel                         # confirmar que el nodo publica comandos
-ros2 topic echo /mapa_visitadas --field info     # resolution, width, height, origin de la grilla
+ros2 run joy joy_node
+```
+```bash
+ros2 run teleop_twist_joy teleop_node --ros-args --params-file /home/francisco/Desktop/fundacion/tpi_m1/src/paquete_py/config/teleop_twist_joy.yaml
 ```
 
----
+Mantené apretado el **botón 9** del control para que se envíen los comandos
+de velocidad. Manejá despacio y evitá chocar contra las paredes — un choque
+hace patinar la odometría y puede generar loop closures falsos, sobre todo en
+mundos con geometría repetitiva.
 
-## Validación — segundo laberinto
+### Guardar el mapa
 
-No hay que tocar código: el mundo y la posición inicial son argumentos del launch.
+Con Gazebo + slam_toolbox todavía corriendo (Terminal 1), en una terminal
+nueva:
 
 ```bash
-ros2 launch my_robot_description gazebo.launch.py \
-  world:=otro_laberinto.world x:=0 y:=0 yaw:=0.0
+source install/setup.bash
+ros2 run nav2_map_server map_saver_cli -f src/my_robot_navigation/maps/living_room
+# o
+ros2 run nav2_map_server map_saver_cli -f src/my_robot_navigation/maps/depot
 ```
 
-(El archivo del mundo debe estar en `my_robot_description/worlds/` y tener los plugins
-de sistema: Physics, UserCommands, SceneBroadcaster y Sensors, más una luz.)
-
-La grilla de ocupación no necesita ajustes: al ser simétrica y centrada en el spawn,
-cubre cualquier laberinto de tamaño similar sin importar la orientación.
+Genera `<nombre>.pgm` + `<nombre>.yaml` en `src/my_robot_navigation/maps/`.
 
 ---
 
-## Orden de arranque
+## Parte 2 — Localización (AMCL)
 
-Gazebo (Terminal 1) tiene que estar corriendo **antes** de lanzar los demás nodos,
-porque el de navegación necesita el `/scan` y el de la grilla necesita el `/odom`.
-Entre las Terminales 2 y 3 el orden da igual.
+### Terminal 1 — Gazebo + map_server + AMCL + RViz
+
+```bash
+source install/setup.bash
+ros2 launch my_robot_navigation localization.launch.py \
+  world:=living_room.world map:=src/my_robot_navigation/maps/living_room.yaml \
+  x:=1.8 y:=-1.9 yaw:=0.0
+```
+
+`x` e `y` son obligatorios (sin default) — tienen que coincidir con una
+posición válida dentro del mundo elegido. `map` por default apunta a
+`living_room.yaml`; para el depósito pasá `map:=.../depot.yaml`.
+
+Este launch usa la odometría **real** del `DiffDrive` (no la de
+`/odom_real`), para que AMCL tenga sentido corrigiéndola contra el mapa.
+
+En RViz, usá la herramienta **"2D Pose Estimate"** para darle a AMCL una pose
+inicial aproximada, y confirmá que la nube de partículas converge alrededor
+del robot mientras se mueve.
+
+---
+
+## Debug / verificaciones
+
+```bash
+ros2 topic list                 # /scan /odom /odom_real /tf /map /cmd_vel ...
+ros2 topic hz /scan             # LIDAR a ~10 Hz
+ros2 topic hz /map              # slam_toolbox publicando (mapping) o map_server (localization)
+ros2 node list                  # confirmar que estan todos los nodos esperados
+```
+
+---
+
+## Estructura del workspace
+
+- `my_robot_description/` — URDF/xacro del robot, mundos de Gazebo, launch de
+  Gazebo, config de RViz, bridge ROS↔Gazebo.
+- `my_robot_navigation/` — configs (`slam_toolbox.yaml`, `amcl.yaml`),
+  launch files (`slam_launch.py`, `localization.launch.py`), nodos propios
+  (`ground_truth_odom_tf.py`, más `wall_follower.py`/`occupancy_grid.py` del
+  TP anterior, ya no usados en este TP) y mapas guardados (`maps/`).

@@ -134,11 +134,18 @@ def generate_launch_description():
     )
 
     # Visualización
+    rviz_config = os.path.join(
+        pkg_description,
+        'rviz',
+        'urdf_config.rviz'
+    )
+
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
         name='rviz2',
         output='screen',
+        arguments=['-d', rviz_config],
         parameters=[
             {
                 'use_sim_time': True,

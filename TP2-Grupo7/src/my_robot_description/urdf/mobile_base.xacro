@@ -58,7 +58,7 @@
 
   <xacro:property name="wheel_collision_radius" value="0.033"/>
   <xacro:property name="wheel_collision_length" value="0.020"/>
-  <xacro:property name="castor_wheel_collision_radius" value="0.0125"/>
+  <xacro:property name="castor_wheel_collision_radius" value="0.0225"/>
   <xacro:property name="lidar_collision_radius" value="0.03"/>
   <xacro:property name="lidar_collision_length" value="0.04"/>
 
@@ -344,7 +344,7 @@
       <lidar>
         <scan>
           <horizontal>
-            <samples>360</samples>
+            <samples>720</samples>
             <resolution>1</resolution>
             <min_angle>-3.141592</min_angle>
             <max_angle>3.141592</max_angle>

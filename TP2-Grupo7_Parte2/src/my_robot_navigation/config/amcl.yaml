@@ -1,0 +1,67 @@
+amcl:
+  ros__parameters:
+
+    # Utiliza el reloj de Gazebo
+    use_sim_time: true
+
+    # Frames utilizados por el robot
+    global_frame_id: map
+    odom_frame_id: odom
+    base_frame_id: base_footprint
+
+    # Tópico del LIDAR
+    scan_topic: /scan
+
+    # Modelo de movimiento:
+    # el robot tiene tracción diferencial
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+
+    # Modelo utilizado para comparar el LIDAR con el mapa
+    laser_model_type: likelihood_field
+
+    # Límites reales configurados para nuestro LIDAR
+    laser_min_range: 0.08
+    laser_max_range: 10.0
+    max_beams: 60
+    laser_likelihood_max_dist: 2.0
+
+    # Ruido estimado de la odometría
+    alpha1: 0.2
+    alpha2: 0.2
+    alpha3: 0.2
+    alpha4: 0.2
+    alpha5: 0.2
+
+    # Cantidad de partículas utilizadas para localizar el robot
+    min_particles: 500
+    max_particles: 2000
+
+    # Movimiento mínimo para actualizar la localización
+    update_min_d: 0.25
+    update_min_a: 0.20
+
+    # Parámetros del filtro de partículas
+    pf_err: 0.05
+    pf_z: 0.99
+    resample_interval: 1
+
+    # Parámetros del modelo del sensor
+    sigma_hit: 0.2
+    z_hit: 0.5
+    z_short: 0.05
+    z_max: 0.05
+    z_rand: 0.5
+    lambda_short: 0.1
+
+    # Publica la transformación map -> odom
+    tf_broadcast: true
+    transform_tolerance: 1.0
+
+    # La pose inicial se indicará desde RViz
+    set_initial_pose: false
+
+    # Guarda periódicamente la última pose estimada
+    save_pose_rate: 0.5
+
+    # No se descartan haces del LIDAR inicialmente
+    do_beamskip: false

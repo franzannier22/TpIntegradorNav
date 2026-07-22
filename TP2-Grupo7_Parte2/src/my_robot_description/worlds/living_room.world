@@ -1,0 +1,242 @@
+<?xml version="1.0" ?>
+<sdf version='1.7'>
+  <world name='default'>
+
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light name='sun' type='directional'>
+      <cast_shadows>1</cast_shadows>
+      <pose>0 0 10 0 -0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name='ground_plane'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry><plane><normal>0 0 1</normal><size>20 20</size></plane></geometry>
+        </collision>
+        <visual name='visual'>
+          <geometry><plane><normal>0 0 1</normal><size>20 20</size></plane></geometry>
+          <material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.8 0.8 0.8 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Paredes de la habitacion (poses tomadas del bloque <state>, layout real) -->
+    <model name='room_wall_2x5'>
+      <static>1</static>
+      <pose>-2.5 0 1 0 -0 0</pose>
+      <link name='link'>
+        <visual name='visual'>
+          <geometry><box><size>0.1 5 2</size></box></geometry>
+          <material><ambient>0.9 0.85 0.7 1</ambient><diffuse>0.9 0.85 0.7 1</diffuse></material>
+        </visual>
+        <collision name='collision'>
+          <geometry><box><size>0.1 5 2</size></box></geometry>
+        </collision>
+      </link>
+    </model>
+    <model name='room_wall_2x5_0'>
+      <static>1</static>
+      <pose>2.5 0 1 0 -0 0</pose>
+      <link name='link'>
+        <visual name='visual'>
+          <geometry><box><size>0.1 5 2</size></box></geometry>
+          <material><ambient>0.9 0.85 0.7 1</ambient><diffuse>0.9 0.85 0.7 1</diffuse></material>
+        </visual>
+        <collision name='collision'>
+          <geometry><box><size>0.1 5 2</size></box></geometry>
+        </collision>
+      </link>
+    </model>
+    <model name='room_wall_2x5_1'>
+      <static>1</static>
+      <pose>0 -2.45 1 0 -0 1.5707</pose>
+      <link name='link'>
+        <visual name='visual'>
+          <geometry><box><size>0.1 5 2</size></box></geometry>
+          <material><ambient>0.9 0.85 0.7 1</ambient><diffuse>0.9 0.85 0.7 1</diffuse></material>
+        </visual>
+        <collision name='collision'>
+          <geometry><box><size>0.1 5 2</size></box></geometry>
+        </collision>
+      </link>
+    </model>
+    <model name='room_wall_2x5_2'>
+      <static>1</static>
+      <pose>0 2.45 1 0 -0 1.5707</pose>
+      <link name='link'>
+        <visual name='visual'>
+          <geometry><box><size>0.1 5 2</size></box></geometry>
+          <material><ambient>0.9 0.85 0.7 1</ambient><diffuse>0.9 0.85 0.7 1</diffuse></material>
+        </visual>
+        <collision name='collision'>
+          <geometry><box><size>0.1 5 2</size></box></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Muebles: mallas de Fuel (dominio openrobotics, ya validado) -->
+    <model name='Sofa'>
+      <static>1</static>
+      <pose>0.394007 -1.2 0 -7e-06 0 1.5707</pose>
+      <link name='link'>
+        <visual name='visual'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/sofa/2/files/meshes/Sofa.obj</uri></mesh></geometry>
+        </visual>
+        <collision name='collision'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/sofa/2/files/meshes/Sofa.obj</uri></mesh></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name='CoffeeTable'>
+      <static>1</static>
+      <pose>0 0.1 0 0 -0 0</pose>
+      <link name='body'>
+        <visual name='visual'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/coffeetable/1/files/meshes/CoffeeTable.obj</uri><scale>0.00817 0.00817 0.00817</scale></mesh></geometry>
+        </visual>
+        <collision name='collision'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/coffeetable/1/files/meshes/CoffeeTable.obj</uri><scale>0.00817 0.00817 0.00817</scale></mesh></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name='MiniSofa'>
+      <static>1</static>
+      <pose>-1 0.1 0 0 -0 -3.1415</pose>
+      <link name='body'>
+        <visual name='visual'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/minisofa/2/files/meshes/minisofa.obj</uri></mesh></geometry>
+        </visual>
+        <collision name='collision'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/minisofa/2/files/meshes/minisofa.obj</uri></mesh></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name='Chair'>
+      <static>1</static>
+      <pose>1 0.1 0 -4e-06 2e-06 3.1415</pose>
+      <link name='body'>
+        <visual name='visual'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/chair/2/files/meshes/Chair.obj</uri><scale>0.00817 0.00817 0.00817</scale></mesh></geometry>
+        </visual>
+        <collision name='collision'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/chair/2/files/meshes/Chair.obj</uri><scale>0.00817 0.00817 0.00817</scale></mesh></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name='TVStand'>
+      <static>1</static>
+      <pose>0 2.2 0 0 -0 0</pose>
+      <link name='body'>
+        <visual name='visual'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/tvstand/1/files/meshes/TVStand.obj</uri></mesh></geometry>
+        </visual>
+        <collision name='collision'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/tvstand/1/files/meshes/TVStand_Col.obj</uri></mesh></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <model name='LampAndStand'>
+      <static>1</static>
+      <pose>-1 -1 0 0 -0 1.5707</pose>
+      <link name='body'>
+        <visual name='visual'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/lampandstand/2/files/meshes/LampAndStand.obj</uri></mesh></geometry>
+        </visual>
+        <collision name='collision'>
+          <geometry><mesh><uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/lampandstand/2/files/meshes/LampAndStand_Col.obj</uri></mesh></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Bookshelf y cabinet: primitivas puras (cajas), sin dependencia de Fuel -->
+    <model name='Bookshelf'>
+      <static>1</static>
+      <pose>-2 2.4 0 0 -0 0</pose>
+      <link name='link'>
+        <collision name='back'>
+          <pose>0 0.005 0.6 0 -0 0</pose>
+          <geometry><box><size>0.9 0.01 1.2</size></box></geometry>
+        </collision>
+        <visual name='back_visual'>
+          <pose>0 0.005 0.6 0 -0 0</pose>
+          <geometry><box><size>0.9 0.01 1.2</size></box></geometry>
+          <material><ambient>0.55 0.35 0.2 1</ambient><diffuse>0.55 0.35 0.2 1</diffuse></material>
+        </visual>
+        <collision name='left_side'>
+          <pose>0.45 -0.195 0.6 0 -0 0</pose>
+          <geometry><box><size>0.02 0.4 1.2</size></box></geometry>
+        </collision>
+        <visual name='left_side_visual'>
+          <pose>0.45 -0.195 0.6 0 -0 0</pose>
+          <geometry><box><size>0.02 0.4 1.2</size></box></geometry>
+          <material><ambient>0.55 0.35 0.2 1</ambient><diffuse>0.55 0.35 0.2 1</diffuse></material>
+        </visual>
+        <collision name='right_side'>
+          <pose>-0.45 -0.195 0.6 0 -0 0</pose>
+          <geometry><box><size>0.02 0.4 1.2</size></box></geometry>
+        </collision>
+        <visual name='right_side_visual'>
+          <pose>-0.45 -0.195 0.6 0 -0 0</pose>
+          <geometry><box><size>0.02 0.4 1.2</size></box></geometry>
+          <material><ambient>0.55 0.35 0.2 1</ambient><diffuse>0.55 0.35 0.2 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name='cabinet'>
+      <static>1</static>
+      <pose>2.21 2.17 0 0 -0 1.5707</pose>
+      <link name='cabinet_bottom_plate'>
+        <collision name='box'>
+          <pose>0 0 0.5 0 -0 0</pose>
+          <geometry><box><size>0.45 0.45 1.0</size></box></geometry>
+        </collision>
+        <visual name='box_visual'>
+          <pose>0 0 0.5 0 -0 0</pose>
+          <geometry><box><size>0.45 0.45 1.0</size></box></geometry>
+          <material><ambient>0.6 0.5 0.4 1</ambient><diffuse>0.6 0.5 0.4 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name='door_08x2m_0'>
+      <static>1</static>
+      <pose>-2.495 -1.2 1 0 -0 0</pose>
+      <link name='link'>
+        <visual name='visual'>
+          <geometry><box><size>0.1 0.8 2</size></box></geometry>
+          <material><ambient>0.4 0.3 0.2 1</ambient><diffuse>0.4 0.3 0.2 1</diffuse></material>
+        </visual>
+        <collision name='collision'>
+          <geometry><box><size>0.1 0.8 2</size></box></geometry>
+        </collision>
+      </link>
+    </model>
+
+  </world>
+</sdf>

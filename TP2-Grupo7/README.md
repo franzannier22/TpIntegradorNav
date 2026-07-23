@@ -114,6 +114,99 @@ del robot mientras se mueve.
 
 ---
 
+## Parte 3 — Costmap, Planner y Controller
+
+### Terminal 1 — Gazebo + map_server + AMCL + planner + controller + RViz
+
+```bash
+source install/setup.bash
+ros2 launch my_robot_navigation nav_launch.py
+# o para el deposito:
+ros2 launch my_robot_navigation nav_launch.py \
+  world:=depot.world map:=src/my_robot_navigation/maps/depot.yaml x:=-5.0 y:=0.0 yaw:=0.0
+```
+
+Este launch (todo en un único archivo) levanta:
+
+- **Gazebo** + el robot + el bridge.
+- **`map_server`** — publica el mapa guardado (capa estática del costmap).
+- **`nav2_amcl`** — localización. Recibe una **pose inicial automática** desde
+  los argumentos `x`/`y`/`yaw`, así que **no hace falta el "2D Pose Estimate"**;
+  la TF `map→odom` existe desde el arranque y los costmaps se activan solos.
+- **`planner_server`** (NavFn, A\*) con su **global costmap**.
+- **`controller_server`** con **dos algoritmos** (DWB y RPP) y sus **global +
+  local costmaps**.
+- **`nav2_lifecycle_manager`** que gestiona los 4 nodos de ciclo de vida.
+- **RViz**.
+
+Todos los parámetros del costmap, planner y controller están en
+`config/nav2_params.yaml`.
+
+Los defaults son para `living_room`. Para otro mundo pasá `world`, `map`, `x` e
+`y` (la pose inicial de AMCL se toma de `x`/`y`/`yaw`, así que tienen que
+coincidir con el spawn).
+
+### Verificar que todo quedó activo
+
+En una terminal nueva y sourceada:
+
+```bash
+ros2 lifecycle get /planner_server      # debe decir: active [3]
+ros2 lifecycle get /controller_server   # debe decir: active [3]
+```
+
+### Ver los costmaps en RViz
+
+Fixed Frame → `map`, y agregá estos displays (botón **Add → By topic**):
+
+| Topic                        | Tipo   | Qué muestra                         |
+|------------------------------|--------|-------------------------------------|
+| `/global_costmap/costmap`    | `Map`  | Costmap global (static + inflación) |
+| `/local_costmap/costmap`     | `Map`  | Costmap local (ventana móvil)       |
+| `/plan`                      | `Path` | Ruta calculada por el planner       |
+
+Deberías ver la **capa de inflación** (aureola de color) alrededor de las
+paredes y muebles. Si un display queda tapado por otro, bajale el **Alpha** o
+reordenalos en la lista. Guardá con `File → Save Config` para no repetirlo.
+
+**Probar la capa de obstáculos (LIDAR):** agregá un objeto nuevo en Gazebo
+(cerca del robot) y observá el **local costmap** en RViz: el obstáculo aparece
+marcado en tiempo real y, al retirarlo, se limpia. Esto confirma que la
+`obstacle_layer` está consumiendo `/scan` correctamente.
+
+### Probar el planner (A\* / Dijkstra)
+
+Con la simulación corriendo, en otra terminal sourceada:
+
+```bash
+ros2 action send_goal /compute_path_to_pose nav2_msgs/action/ComputePathToPose \
+  "{goal: {header: {frame_id: map}, pose: {position: {x: 0.5, y: 0.5}, orientation: {w: 1.0}}}, planner_id: GridBased, use_start: false}"
+```
+
+Devuelve el path y lo dibuja en el display `/plan`. Para cambiar entre A\* y
+Dijkstra, editá `use_astar` en `config/nav2_params.yaml` (`true` = A\*,
+`false` = Dijkstra).
+
+> **Ojo con la meta:** tiene que caer **dentro de los límites del mapa** y en
+> zona libre. Si el `Result` da `error_code: 204` la meta está fuera del mapa;
+> `206` es que cayó sobre un obstáculo. Los rangos válidos surgen del `.yaml`
+> del mapa (`origin` + `resolution × tamaño_px`). Para `living_room`:
+> X ≈ [-2.46, 2.69], Y ≈ [-2.44, 2.42]. Lo más cómodo es usar el botón
+> **"2D Goal Pose"** de RViz y clickear un punto libre.
+
+### Seleccionar el algoritmo del controller
+
+Los dos controllers se cargan a la vez. Se elige cuál usar con el campo
+`controller_id` al enviar la meta a la acción `FollowPath`:
+
+- `FollowPath` → **DWB**
+- `FollowPathRPP` → **Regulated Pure Pursuit (RPP)**
+
+El envío de la trayectoria al controller lo hará el **nodo orquestador (Parte
+4)**; ahí se indica el `controller_id` elegido.
+
+---
+
 ## Debug / verificaciones
 
 ```bash

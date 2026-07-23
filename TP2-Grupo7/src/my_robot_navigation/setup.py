@@ -33,6 +33,7 @@ setup(
             'occupancy_grid = my_robot_navigation.occupancy_grid:main',
             'camera = my_robot_navigation.camera:main',
             'ground_truth_odom_tf = my_robot_navigation.ground_truth_odom_tf:main',
+            'goal_orchestrator = my_robot_navigation.goal_orchestrator:main',
         ],
     },
 )

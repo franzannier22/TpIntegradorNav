@@ -207,6 +207,78 @@ El envío de la trayectoria al controller lo hará el **nodo orquestador (Parte
 
 ---
 
+## Parte 4 — Orquestador
+
+Nodo `goal_orchestrator` que une el planner y el controller: recibe metas de
+forma interactiva desde RViz y lleva el robot a cualquier punto alcanzable del
+mapa, replanificando en el camino.
+
+Qué hace:
+
+- Se suscribe a **`/goal_pose`** (el botón **"2D Goal Pose"** de RViz).
+- Consulta la **pose actual** del robot vía TF `map → base_link`.
+- Es action client de **`ComputePathToPose`**: manda meta + pose de inicio +
+  `planner_id` y recibe el path.
+- Es action client de **`FollowPath`**: manda el path + `controller_id` +
+  `goal_checker_id` para que el controller lo ejecute.
+- **Replanifica** periódicamente (frecuencia configurable) actualizando el path
+  del controller mientras navega.
+- **Reporta el fin** por log: éxito (`Meta alcanzada con exito`) o fallo
+  indicando la **etapa** (localización / planificación / control).
+- Si llega una **meta nueva** durante una navegación, cancela la activa y
+  arranca la nueva.
+
+### Cómo probarlo
+
+Primero levantá toda la pila de navegación de la Parte 3:
+
+```bash
+# Terminal 1
+source install/setup.bash
+ros2 launch my_robot_navigation nav_launch.py
+```
+
+Y en otra terminal, el orquestador:
+
+```bash
+# Terminal 2
+source install/setup.bash
+ros2 run my_robot_navigation goal_orchestrator
+```
+
+Debe loguear `Orquestador listo. Esperando metas en /goal_pose...`. Luego, en
+RViz, botón **"2D Goal Pose"** → clic en un punto libre dentro del mapa → el
+robot navega y se ven los logs de progreso y fin.
+
+### Parámetros configurables
+
+Se pasan con `--ros-args -p <param>:=<valor>`:
+
+| Parámetro | Default | Descripción |
+|-----------|---------|-------------|
+| `replan_period` | `3.0` | Período de replanificación en segundos |
+| `planner_id` | `GridBased` | Planner global (coincide con `nav2_params.yaml`) |
+| `controller_id` | `FollowPath` | Algoritmo del controller: `FollowPath`=DWB, `FollowPathRPP`=RPP |
+| `goal_checker_id` | `general_goal_checker` | Goal checker del controller |
+
+Ejemplo con RPP y replanificación cada 2 s:
+
+```bash
+ros2 run my_robot_navigation goal_orchestrator \
+  --ros-args -p controller_id:=FollowPathRPP -p replan_period:=2.0
+```
+
+### Pruebas que conviene mostrar
+
+- **Meta nueva en pleno viaje:** clic en otro punto antes de llegar → loguea
+  `Cancelando navegacion en curso...` y arranca la nueva.
+- **Replanning:** poné un obstáculo en Gazebo sobre el camino → el path se
+  recalcula solo y lo esquiva.
+- **Fallo por etapa:** mandá una meta imposible (encerrada) → loguea el fallo
+  indicando en qué etapa ocurrió.
+
+---
+
 ## Debug / verificaciones
 
 ```bash
@@ -222,7 +294,9 @@ ros2 node list                  # confirmar que estan todos los nodos esperados
 
 - `my_robot_description/` — URDF/xacro del robot, mundos de Gazebo, launch de
   Gazebo, config de RViz, bridge ROS↔Gazebo.
-- `my_robot_navigation/` — configs (`slam_toolbox.yaml`, `amcl.yaml`),
-  launch files (`slam_launch.py`, `localization.launch.py`), nodos propios
-  (`ground_truth_odom_tf.py`, más `wall_follower.py`/`occupancy_grid.py` del
-  TP anterior, ya no usados en este TP) y mapas guardados (`maps/`).
+- `my_robot_navigation/` — configs (`slam_toolbox.yaml`, `amcl.yaml`,
+  `nav2_params.yaml`), launch files (`slam_launch.py`,
+  `localization.launch.py`, `nav_launch.py`), nodos propios
+  (`ground_truth_odom_tf.py`, `goal_orchestrator.py`, más `wall_follower.py`/
+  `occupancy_grid.py` del TP anterior, ya no usados en este TP) y mapas
+  guardados (`maps/`).

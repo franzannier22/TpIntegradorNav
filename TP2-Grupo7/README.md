@@ -207,6 +207,86 @@ El envío de la trayectoria al controller lo hará el **nodo orquestador (Parte
 
 ---
 
+## Parte 4 — Orquestador
+
+Con `nav_launch.py` (Parte 3) corriendo, en otra terminal:
+
+```bash
+source install/setup.bash
+ros2 run my_robot_navigation goal_orchestrator
+```
+
+En RViz, usá **"2D Goal Pose"** para marcarle una meta al robot. El nodo:
+consulta su pose actual vía TF (`map → base_link`), le pide un camino al
+`planner_server` (`ComputePathToPose`), se lo manda al `controller_server`
+(`FollowPath`), y replanifica cada `replan_period` segundos (default 3.0)
+mientras navega. Loguea éxito o en qué etapa falló (localización/TF,
+planificación o control). Si llega una meta nueva mientras navega, cancela
+la anterior y arranca con la nueva.
+
+Parámetros configurables (`--ros-args -p nombre:=valor`):
+
+| Parámetro          | Default                | Qué hace                                  |
+|---------------------|-------------------------|--------------------------------------------|
+| `replan_period`      | `3.0`                   | Segundos entre replanificaciones           |
+| `planner_id`          | `GridBased`              | Debe coincidir con `nav2_params.yaml`      |
+| `controller_id`       | `FollowPath` (DWB)       | O `FollowPathRPP` (RPP)                    |
+| `goal_checker_id`     | `general_goal_checker`   | Debe coincidir con `nav2_params.yaml`      |
+
+---
+
+## Parte 5 — Robot físico
+
+Firmware y detalle completo en [`robot_fisico/README.md`](robot_fisico/README.md).
+Resumen del flujo:
+
+### 1. Aislar el robot de otros grupos (`ROS_DOMAIN_ID`)
+
+El ESP32 (vía micro-ROS) se suscribe al topic **global** `cmd_vel`, sin
+namespace. Si otro grupo usa el mismo firmware sin modificar, su
+`controller_server` movería también a este robot (y viceversa). La forma más
+simple de evitarlo, sin tocar el firmware, es que **todas** las terminales
+del sistema usen el mismo `ROS_DOMAIN_ID`, distinto al de otros grupos:
+
+```bash
+export ROS_DOMAIN_ID=7
+```
+
+Ponelo en la terminal del `micro_ros_agent`, y en las de Nav2 y el
+orquestador — antes de sourcear/lanzar nada.
+
+### 2. Levantar el agente micro-ROS
+
+```bash
+export ROS_DOMAIN_ID=7
+source <ruta-a-micro_ws>/install/setup.bash
+ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
+```
+
+Requiere que la PC que corre esto tenga la IP configurada en el firmware
+(`192.168.0.183` por default — ver `robot_fisico/README.md`).
+
+### 3. Correr Nav2 + orquestador (mismo `ROS_DOMAIN_ID`)
+
+```bash
+export ROS_DOMAIN_ID=7
+source install/setup.bash
+ros2 launch my_robot_navigation nav_launch.py
+```
+```bash
+export ROS_DOMAIN_ID=7
+source install/setup.bash
+ros2 run my_robot_navigation goal_orchestrator
+```
+
+El `controller_server` publica `/cmd_vel` como siempre — ahora, además de
+mover el robot simulado (vía el bridge), el ESP32 real (en el mismo dominio)
+también lo recibe y mueve el robot físico. No hace falta evasión de
+obstáculos en el robot físico (lo pide la consigna explícitamente) — solo
+que ejecute los comandos de velocidad.
+
+---
+
 ## Debug / verificaciones
 
 ```bash
@@ -222,7 +302,11 @@ ros2 node list                  # confirmar que estan todos los nodos esperados
 
 - `my_robot_description/` — URDF/xacro del robot, mundos de Gazebo, launch de
   Gazebo, config de RViz, bridge ROS↔Gazebo.
-- `my_robot_navigation/` — configs (`slam_toolbox.yaml`, `amcl.yaml`),
-  launch files (`slam_launch.py`, `localization.launch.py`), nodos propios
-  (`ground_truth_odom_tf.py`, más `wall_follower.py`/`occupancy_grid.py` del
-  TP anterior, ya no usados en este TP) y mapas guardados (`maps/`).
+- `my_robot_navigation/` — configs (`slam_toolbox.yaml`, `amcl.yaml`,
+  `nav2_params.yaml`), launch files (`slam_launch.py`,
+  `localization.launch.py`, `nav_launch.py`), nodos propios
+  (`ground_truth_odom_tf.py`, `goal_orchestrator.py`, más
+  `wall_follower.py`/`occupancy_grid.py` del TP anterior, ya no usados en
+  este TP) y mapas guardados (`maps/`).
+- `robot_fisico/` — firmware ESP32 (micro-ROS) para la Parte 5, fuera del
+  workspace de colcon (no es un paquete ROS 2).

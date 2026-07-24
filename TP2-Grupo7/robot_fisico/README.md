@@ -9,11 +9,13 @@ ni `build/` — se generan solas al compilar, no se versionan.
 
 - `main.c` — nodo micro-ROS: se suscribe a `cmd_vel` (`geometry_msgs/msg/Twist`)
   y llama a `motor_driver` para mover los motores acorde a la velocidad
-  lineal/angular recibida. Publica también lecturas de `encoder` y
-  `ultrasonic`.
+  lineal/angular recibida. También expone el servicio `motors_enable`
+  (`std_srvs/srv/SetBool`) para habilitar/deshabilitar los motores.
 - `motor_driver.c/h` — control de motores (PWM/dirección).
-- `encoder.c/h` — lectura de encoder de rueda (RPM).
-- `ultrasonic.c/h` — lectura del sensor ultrasónico.
+
+Del TP1 original se sacaron los drivers de `encoder` y `ultrasonic` —
+publicaban telemetría (RPM, distancia) que no hace falta para esta Parte 5,
+que solo pide ejecutar `/cmd_vel` sin evasión de obstáculos.
 
 ## Setup para compilar (una sola vez por máquina)
 
@@ -72,9 +74,9 @@ alcanzable), deberían aparecer sus topics:
 ```bash
 ros2 topic list
 # /cmd_vel (lo consume el ESP32)
-# /ultrasonic_publisher
-# /rpm_right_publisher
 ```
+
+También debería aparecer el servicio `/motors_enable` (`ros2 service list`).
 
 ## Aislar el robot de otros grupos (`ROS_DOMAIN_ID`)
 

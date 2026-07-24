@@ -11,14 +11,11 @@
 #include "esp_err.h"
 #include "driver/gpio.h"
 #include "motor_driver.h"
-#include "ultrasonic.h"
-#include "encoder.h"
 
 #include <std_srvs/srv/set_bool.h>
 #include <uros_network_interfaces.h>
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>
-#include <std_msgs/msg/float32.h>
 #include <geometry_msgs/msg/twist.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
@@ -32,12 +29,6 @@
 #define MICRO_ROS_APP_STACK 16000
 #define MICRO_ROS_APP_TASK_PRIO 5
 
-#define PIN_TRIG        GPIO_NUM_4
-#define PIN_ECHO        GPIO_NUM_19
-#define MAX_DISTANCE_CM 400
-#define AVG_SAMPLES     5
-#define ECHO_TIMEOUT_MS 30
-
 #define WHEEL_SEPARATION  0.1f
 #define MAX_LINEAR_VEL    1.0f
 #define MAX_ANGULAR_VEL   1.0f
@@ -49,14 +40,7 @@ static const char *TAG = "micro_ros";
 
 rcl_service_t servidor_motor; // Servicio para habilitar/deshabilitar motores
 
-rcl_publisher_t publisher_ults; // Publicador para distancia del ultrasonido
-rcl_publisher_t publisher_rpm_right; // Publicador para RPM del motor derecho
-
 rcl_subscription_t subscriber; // Suscriptor para cmd_vel (Twist)
- 
-std_msgs__msg__Float32 pub_msg; // Mensaje para publicar distancia del ultrasonido
-std_msgs__msg__Float32 cmd_right; // Mensaje para publicar RPM del motor derecho
-//std_msgs__msg__Float32 cmd_left;  // Mensaje para publicar RPM del motor izquierdo (no usado por falta de encoder)
 
 geometry_msgs__msg__Twist cmd_vel_msg; // Mensaje para recibir cmd_vel (Twist)
 
@@ -77,7 +61,7 @@ void service_callback(const void *request_msg, void *response_msg)
     std_srvs__srv__SetBool_Response *res =
         (std_srvs__srv__SetBool_Response *)response_msg;
 
-    motor_right_enabled = req->data;                
+    motor_right_enabled = req->data;
     motor_left_enabled  = req->data;        // Deshabilita ambos motores si req->data es false, habilita ambos si es true
 
     if (!req->data) {
@@ -87,23 +71,6 @@ void service_callback(const void *request_msg, void *response_msg)
 
     res->success = true;
     ESP_LOGI(TAG, "Motores %s", req->data ? "habilitados" : "deshabilitados");
-}
-
-void timer_callback(rcl_timer_t *timer, int64_t last_call_time, unsigned int timer_index)
-{
-    (void) last_call_time;
-    (void) timer_index;
-    if (timer == NULL)
-        return;
-
-    pub_msg.data = (float) ultrasonic_read_filtered_cm(AVG_SAMPLES, PIN_TRIG, PIN_ECHO, ECHO_TIMEOUT_MS, MAX_DISTANCE_CM);
-    RCSOFTCHECK(rcl_publish(&publisher_ults, &pub_msg, NULL));
-
-    cmd_right.data = encoder_get_rpm_right();
-    //cmd_left.data  = encoder_get_rpm_left(); // no tengo el encoder del motor izquierdo, así que solo publico el derecho por ahora
-
-    RCSOFTCHECK(rcl_publish(&publisher_rpm_right, &cmd_right, NULL));
-    //RCSOFTCHECK(rcl_publish(&publisher_rpm_left, &cmd_left, NULL));
 }
 
 void subscription_callback(const void *msgin)
@@ -155,31 +122,11 @@ void micro_ros_task(void *arg)
     RCCHECK(rclc_node_init_default(&node, "node_name","", &support));
     ESP_LOGI(TAG, "Nodo creado correctamente");
 
-    RCCHECK(rclc_publisher_init_default(
-        &publisher_ults,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-        "ultrasonic_publisher"));
-
-    RCCHECK(rclc_publisher_init_default(
-        &publisher_rpm_right,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-        "rpm_right_publisher"));
-
     RCCHECK(rclc_subscription_init_default(
         &subscriber,
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
         "cmd_vel"));
-
-    rcl_timer_t timer = rcl_get_zero_initialized_timer();
-    RCCHECK(rclc_timer_init_default2(
-        &timer,
-        &support,
-        RCL_MS_TO_NS(1000),
-        timer_callback,
-        true));
 
     RCCHECK(rclc_service_init_default(
         &servidor_motor,
@@ -188,9 +135,8 @@ void micro_ros_task(void *arg)
         "motors_enable"));
 
     rclc_executor_t executor = rclc_executor_get_zero_initialized_executor();
-    RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator)); //
+    RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
     RCCHECK(rclc_executor_set_timeout(&executor, RCL_MS_TO_NS(1000)));
-    RCCHECK(rclc_executor_add_timer(&executor, &timer));
     RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &cmd_vel_msg,
                                            &subscription_callback, ON_NEW_DATA));
     RCCHECK(rclc_executor_add_service(&executor, &servidor_motor, &srv_request, &srv_response, &service_callback));
@@ -202,8 +148,6 @@ void micro_ros_task(void *arg)
 
     RCCHECK(rcl_service_fini(&servidor_motor, &node));
     RCCHECK(rcl_subscription_fini(&subscriber, &node));
-    RCCHECK(rcl_publisher_fini(&publisher_ults, &node));
-    RCCHECK(rcl_publisher_fini(&publisher_rpm_right, &node));
     RCCHECK(rcl_node_fini(&node));
     vTaskDelete(NULL);
 }
@@ -214,13 +158,7 @@ void app_main(void)
     ESP_ERROR_CHECK(uros_network_interface_initialize());
 #endif
 
-    if (ultrasonic_init(PIN_TRIG, PIN_ECHO) != ESP_OK) {
-        ESP_LOGE(TAG, "No se pudo inicializar el ultrasonido");
-        return;
-    }
-
     motors_init(&motor_right, &motor_left);
-    encoders_init();
 
     xTaskCreate(micro_ros_task, "micro_ros_task",
                 MICRO_ROS_APP_STACK, NULL, MICRO_ROS_APP_TASK_PRIO, NULL);

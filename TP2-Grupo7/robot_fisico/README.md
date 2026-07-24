@@ -19,12 +19,21 @@ que solo pide ejecutar `/cmd_vel` sin evasión de obstáculos.
 
 ## Setup para compilar (una sola vez por máquina)
 
-Necesita el **ESP-IDF** instalado y el componente **micro_ros_espidf_component**
-(no vienen en este repo, se instalan aparte siguiendo la documentación oficial
-de micro-ROS para ESP32).
+Necesita el **ESP-IDF** instalado (acá se usó v5.5, activado con
+`source ~/.espressif/v5.5/esp-idf/export.sh`) y el componente
+**micro_ros_espidf_component** — no viene en este repo (es una librería de
+terceros, ver `.gitignore`), hay que clonarlo dentro de `esp32_firmware/`:
 
 ```bash
 cd robot_fisico/esp32_firmware
+mkdir -p components
+git clone https://github.com/micro-ROS/micro_ros_espidf_component.git components/micro_ros_espidf_component
+```
+
+Recién ahí configurar y compilar:
+
+```bash
+source ~/.espressif/v5.5/esp-idf/export.sh
 idf.py set-target esp32
 idf.py menuconfig   # configurar WiFi SSID/password (ver abajo) y verificar IP/puerto del agente
 ```

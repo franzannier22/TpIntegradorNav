@@ -9,3 +9,9 @@ __pycache__/
 
 # Config local de editor (raiz del repo)
 /.vscode/
+
+# Firmware ESP32: build y componente de terceros (se clona/regenera aparte)
+TP2-Grupo7/robot_fisico/esp32_firmware/build/
+TP2-Grupo7/robot_fisico/esp32_firmware/components/
+TP2-Grupo7/robot_fisico/esp32_firmware/managed_components/
+TP2-Grupo7/robot_fisico/esp32_firmware/sdkconfig.old
